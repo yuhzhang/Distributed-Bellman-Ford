@@ -1,19 +1,12 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 
 
 public class SendThread extends Thread{
-	private Socket socket = null;
-	private int maxThreadCount;
-	private BufferedReader in = null;
-	private PrintWriter out = null;
 	
 	public ArrayList<String> ipPort;
 	public ArrayList<Double> weight;
@@ -50,29 +43,28 @@ public class SendThread extends Thread{
 				mWeight.add(weight.get(i));
 				mLink.add(link.get(i));
 			}
-			
+			String msg;
 			for(int i=0; i<mWeight.size(); i++){
+				msg = "";
+				//construct packet
 				for(int j=0; j<mWeight.size(); j++){
-					if(mWeight.get(i) < Double.MAX_VALUE && i!=j){
-						//construct packet
-						String msg = mIpPort.get(j) + ":" + mWeight.get(j);
-						byte arr[] = msg.getBytes();
-						InetAddress add = Client.getAddress(mIpPort.get(i));
-						int port = Client.getPort(mIpPort.get(i));
-						DatagramPacket dpack = new DatagramPacket(arr, arr.length, add, port);
-						
-						//sending packet
-						try {
-							dsock.send(dpack);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
+					//ignore unlinked neighbor
+					if(mWeight.get(i) < Double.MAX_VALUE && i!=j)
+						msg += mIpPort.get(j) + ":" + mWeight.get(j) + ":";
+				}
+				
+				byte arr[] = msg.getBytes();
+				InetAddress add = Client.getAddress(mIpPort.get(i));
+				int port = Client.getPort(mIpPort.get(i));
+				DatagramPacket dpack = new DatagramPacket(arr, arr.length, add, port);
+				
+				//sending packet
+				try {
+					dsock.send(dpack);
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
-			
-			
-			
 		}
 	}
 }

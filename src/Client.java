@@ -23,13 +23,13 @@ public class Client {
 		}else{
 			try{
 				localPort = Integer.parseInt(args[0]);
-				timeOut = (double) Float.parseFloat(args[1]);
+				timeOut = Double.parseDouble(args[1]);
 				
 				int size = (args.length - 2)/3;
 				for(int i=0; i<size; i++){
 					ipPort.add(args[i*3 + 2]+":"+args[i*3 + 3]);
 					link.add(args[i*3 + 2]+":"+args[i*3 + 3]);
-					weight.add((double) Float.parseFloat(args[i*3 + 4]));
+					weight.add((double) Double.parseDouble(args[i*3 + 4]));
 				}
 			}catch (Exception e){
 				System.err.println("Make sure inputs are valid");
@@ -48,5 +48,9 @@ public class Client {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	static public double getWeight(String tuple){
+		return Double.parseDouble(tuple.split(":")[2]);
 	}
 }

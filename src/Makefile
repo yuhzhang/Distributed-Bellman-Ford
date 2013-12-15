@@ -6,8 +6,9 @@ JC = javac
  
   
 CLASSES = \
-	Sender.java \
-	Receiver.java \
+	Client.java \
+	SendThread.java \
+	ListenThread.java \
 
 default: classes
    
