@@ -9,6 +9,7 @@ CLASSES = \
 	Client.java \
 	SendThread.java \
 	ListenThread.java \
+	TimerThread.java
 
 default: classes
    

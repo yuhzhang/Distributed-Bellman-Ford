@@ -1,78 +1,150 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Hashtable;
 
+public class ListenThread extends Thread {
 
-public class ListenThread extends Thread{
-	
 	public ArrayList<String> ipPort;
 	public ArrayList<Double> weight;
 	public ArrayList<String> link;
-	public int myPort;
+	public DatagramSocket dsock = null;
+	public ArrayList<Date> timer;
+	public ArrayList<String> nb;
+	public String localHost;
+	public Hashtable<String, Double> stored;
 	
-	//constructor with pointers
-	public ListenThread(int port,
-					ArrayList<String> ipPort,
-						ArrayList<Double> weight,
-							ArrayList<String> link){
+	public boolean[] toSend;
+
+	// constructor with pointers
+	public ListenThread(Hashtable<String, Double> store,
+			boolean[] toSend, String localhost,
+			ArrayList<String> neighbors, ArrayList<Date> time,
+			DatagramSocket sock, ArrayList<String> ipPort,
+			ArrayList<Double> weight, ArrayList<String> link) {
 		this.ipPort = ipPort;
 		this.weight = weight;
 		this.link = link;
-		myPort = port;
+		this.dsock = sock;
+		this.timer = time;
+		this.localHost = localhost;
+		this.nb = neighbors;
+		this.toSend = toSend;
+		this.stored = store;
 	}
-	
-	public void run(){
-		DatagramSocket dsock = null;
+
+	public void run() {
 		int maxSize = 8000;
 		DatagramPacket dpack = new DatagramPacket(new byte[maxSize], maxSize);
-		
-		try {
-			dsock = new DatagramSocket(myPort);
-		} catch (SocketException e) {
-			e.printStackTrace();
-		}
-		
-		while(true){
+
+		while (true) {
 			try {
 				dsock.receive(dpack);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			String linkAdd = dpack.getAddress().toString();
+			
+			// parse info from receiver
+			String linkAdd = dpack.getAddress().toString().split("/")[1];
 			int linkPort = dpack.getPort();
 			String linkAddPort = linkAdd + ":" + linkPort;
-			
-			String msg =  new String(dpack.getData(), 0, dpack.getLength());
+			String myAddPort = localHost + ":" + dsock.getLocalPort();
+
+			// find default cost to received node
+			double defaultCost = 0;
+			for (int i = 0; i < weight.size(); i++) {
+				if (ipPort.get(i).equals(linkAddPort))
+					defaultCost = weight.get(i);
+			}
+
+			// if it is a Routing Table
+			String msg = new String(dpack.getData(), 0, dpack.getLength());
 			String[] tokens = msg.split(":");
 			ArrayList<String> cIpPort = new ArrayList<String>();
 			ArrayList<Double> cWeight = new ArrayList<Double>();
-			
-			//tries to catch bad data
-			if(tokens.length%3 == 0){
-				//reconstruct routing table of neighbor
-				for(int i=0; i<tokens.length/3; i++){
-					cIpPort.add(tokens[i*3] + ":" + tokens[i*3+1]);
-					cWeight.add(Double.parseDouble(tokens[i*3+2]));
+
+			//if LINKDOWN message
+			if(msg.equals("LINKDOWN")){
+				//delete from neighbor list
+				for(int i=0; i<nb.size(); i++){
+					if(nb.get(i).equals(linkAddPort)){
+						nb.remove(i);
+						timer.remove(i);
+					}
 				}
 				
-				//update current Routing Table
-				for(int i=0; i<cWeight.size(); i++){
-					//update Routing Table
-					if(ipPort.contains(cIpPort.get(i))){
-						for(int j=0; j<weight.size(); j++){
-							if(ipPort.get(j).equals(cIpPort.get(i))
-									&& weight.get(j) > cWeight.get(i)){
-								weight.set(j, cWeight.get(i));
-								link.set(j, linkAddPort);
+				//set cost of any link to infinity
+				for(int i=0; i<weight.size(); i++){
+					if(link.get(i).equals(linkAddPort)){
+						weight.set(i, Double.MAX_VALUE);
+					}
+				}
+			}
+			
+			//if LINKUP message
+			if(msg.equals("LINKUP")){
+				//add back to neighbor list
+				nb.add(linkAddPort);
+				timer.add(new Date());
+				
+				//update Routing Table
+				for(int i=0; i<weight.size(); i++){
+					if(ipPort.get(i).equals(linkAddPort)){
+						weight.set(i, stored.get(linkAddPort));
+						link.set(i, linkAddPort);
+					}
+				}
+			}
+			
+			// tries to catch bad data
+			if (tokens.length % 3 == 0) {
+				// reconstruct routing table of neighbor
+				for (int i = 0; i < tokens.length / 3; i++) {
+					cIpPort.add(tokens[i * 3] + ":" + tokens[i * 3 + 1]);
+					cWeight.add(Double.parseDouble(tokens[i * 3 + 2])
+							+ defaultCost);
+				}
+				// update current Routing Table
+				for (int i = 0; i < cWeight.size(); i++) {
+
+					String currIpPort = cIpPort.get(i);
+					// if referring to self
+					if (currIpPort.equals(myAddPort)) {
+						// check if already on nb list
+						if (!nb.contains(linkAddPort)) {
+							// if not, add to nb, and routing table
+							nb.add(linkAddPort);
+							timer.add(new Date());
+							ipPort.add(linkAddPort);
+							weight.add(cWeight.get(i));
+							link.add(linkAddPort);
+							toSend[0] = true;
+							stored.put(linkAddPort, cWeight.get(i));
+						} else {
+							//if it is in nb list; log its time
+							for (int j = 0; j < nb.size(); j++) {
+								if (nb.get(j).equals(linkAddPort)){
+									timer.set(j, new Date());
+								}
 							}
 						}
-					}else{
+						// update Routing Table
+					} else if (ipPort.contains(currIpPort)) {
+						for (int j = 0; j < weight.size(); j++) {
+							if (ipPort.get(j).equals(currIpPort)
+									&& weight.get(j) > cWeight.get(i)) {
+								weight.set(j, cWeight.get(i));
+								link.set(j, linkAddPort);
+								toSend[0] = true;
+							}
+						}
+					} else {
 						ipPort.add(cIpPort.get(i));
 						weight.add(cWeight.get(i));
 						link.add(linkAddPort);
+						toSend[0] = true;
 					}
 				}
 			}
