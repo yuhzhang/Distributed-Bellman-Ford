@@ -99,6 +99,10 @@ public class Client {
 			
 			System.out.println(toString(ipPort, weight, link));
 			
+			if(input.equals("nb")){
+				System.out.println(nb);
+			}
+			
 			if(input.equals("SHOWRT")){
 				System.out.println(toString(ipPort, weight, link));
 			}
