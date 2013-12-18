@@ -39,7 +39,7 @@ public class SendThread extends Thread{
 	}
 	
 	public void run(){
-		while(true){
+		while(Client.execute){
 			
 			//stop blasting!!
 			try {
@@ -73,7 +73,7 @@ public class SendThread extends Thread{
 					//construct packet
 					for(int j=0; j<mWeight.size(); j++){
 						//ignore unlinked neighbor
-						if(mWeight.get(j) < Double.MAX_VALUE)
+						//if(mWeight.get(j) < Double.MAX_VALUE)
 							msg += mIpPort.get(j) + ":" + mWeight.get(j) + ":";
 					}
 					

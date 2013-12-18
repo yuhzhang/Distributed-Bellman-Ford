@@ -28,7 +28,7 @@ public class TimerThread extends Thread{
 	}
 	
 	public void run(){
-		while(true){
+		while(Client.execute){
 			Date currTime = new Date();
 			long time = 0;
 

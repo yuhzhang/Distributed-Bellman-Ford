@@ -39,7 +39,7 @@ public class ListenThread extends Thread {
 		int maxSize = 8000;
 		DatagramPacket dpack = new DatagramPacket(new byte[maxSize], maxSize);
 		
-		while (true) {
+		while (Client.execute) {
 			// if route table is updated set to true;
 			// if updated is true at the end; set toSend[0] = true
 			boolean updated = false;
@@ -115,13 +115,34 @@ public class ListenThread extends Thread {
 						//if in routing table; check if needs to be updated
 						if (ipPort.contains(currIpPort)) {
 							int index = ipPort.indexOf(currIpPort);
-							//if default cost + cost to dest < currDest
-							//replace cost and set link
-							if((weight.get(index) < defaultCost + currWeight)){
+							
+							//
+							if(link.get(index).equals(linkAddPort)){
 								weight.set(index, defaultCost + currWeight);
-								link.set(index, linkAddPort);
 								updated = true;
 							}
+							
+							
+							
+							double direct = Double.MAX_VALUE;
+							double min = Double.MAX_VALUE;
+							
+							if(nb.contains(currIpPort))
+								direct = stored.get(currIpPort);
+							
+							min = Math.min(direct, defaultCost + currWeight);
+							min = Math.min(min, weight.get(index));
+							
+							if(min != weight.get(index)){
+								weight.set(index, min);
+								if(min == direct){
+									link.set(index, currIpPort);
+								}else{
+									link.set(index, linkAddPort);
+								}
+								updated = true;
+							}
+							
 						//otherwise just add it
 						}else {
 							ipPort.add(currIpPort);
@@ -137,6 +158,7 @@ public class ListenThread extends Thread {
 			
 			//if LINKDOWN message
 			if(msg.equals("LINKDOWN")){
+				System.out.println("LINKDOWN");
 				//delete from neighbor list
 				for(int i=0; i<nb.size(); i++){
 					if(nb.get(i).equals(linkAddPort)){
@@ -149,12 +171,19 @@ public class ListenThread extends Thread {
 				for(int i=0; i<weight.size(); i++){
 					if(link.get(i).equals(linkAddPort)){
 						weight.set(i, Double.MAX_VALUE);
+						
+						if(nb.contains(ipPort.get(i))){
+							int index = nb.indexOf(ipPort.get(i));
+							weight.set(i, stored.get(ipPort.get(i)));
+							link.set(i, ipPort.get(i));
+						}
 					}
 				}
 			}
 			
 			//if LINKUP message
 			if(msg.equals("LINKUP")){
+				System.out.println("received LINKUP");
 				//add back to neighbor list
 				nb.add(linkAddPort);
 				timer.add(new Date());

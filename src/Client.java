@@ -13,6 +13,8 @@ import java.util.Hashtable;
 
 public class Client {
 
+	public static boolean execute = true;
+	
 	public static void main(String[] args) {
 		
 		//Routing Table
@@ -117,14 +119,27 @@ public class Client {
 					System.out.println("LINKDOWN <ip_address> <port>");
 				}else{
 					String currAdd = tokens[1] + ":" + tokens[2];
-					//if such link exists
+					
+					//if such link exists as a neighbor
 					if(nb.contains(currAdd)){
+						//delete from neighbor list
+						int index = nb.indexOf(currAdd);
+						nb.remove(index);
+						timer.remove(index);
+						
 						//find links in the Routing Table
 						//update cost to MAX_VALUE
 						for(int i=0; i<weight.size(); i++){
 							if(link.get(i).equals(currAdd)){
-								//stored.put(currAdd, weight.get(i));
 								weight.set(i, Double.MAX_VALUE);
+								
+								//if links deleted are still in nb; restore it
+								if(nb.contains(ipPort.get(i))){
+									index = nb.indexOf(ipPort.get(i));
+									weight.set(i, stored.get(ipPort.get(i)));
+									link.set(i, ipPort.get(i));
+									System.out.println("here!");
+								}
 							}
 						}
 						
@@ -137,14 +152,6 @@ public class Client {
 							dsock.send(dpack);
 						} catch (IOException e) {
 							e.printStackTrace();
-						}
-						
-						//delete from neighbor list
-						for(int i=0; i<nb.size(); i++){
-							if(nb.get(i).equals(currAdd)){
-								nb.remove(i);
-								timer.remove(i);
-							}
 						}
 						
 					}else{
@@ -189,6 +196,7 @@ public class Client {
 			}
 			
 			if(input.contains("CLOSE")){
+				execute = false;
 				return;
 			}
 			
