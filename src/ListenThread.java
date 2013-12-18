@@ -38,8 +38,12 @@ public class ListenThread extends Thread {
 	public void run() {
 		int maxSize = 8000;
 		DatagramPacket dpack = new DatagramPacket(new byte[maxSize], maxSize);
-
+		
 		while (true) {
+			// if route table is updated set to true;
+			// if updated is true at the end; set toSend[0] = true
+			boolean updated = false;
+			
 			try {
 				dsock.receive(dpack);
 			} catch (IOException e) {
@@ -65,18 +69,18 @@ public class ListenThread extends Thread {
 			ArrayList<Double> cWeight = new ArrayList<Double>();
 			
 			// tries to catch bad data
-			if (tokens.length % 3 == 0) {
-				
+			if (tokens.length % 3 == 0) {	
 				// reconstruct routing table of neighbor
 				for (int i = 0; i < tokens.length / 3; i++) {
 					cIpPort.add(tokens[i * 3] + ":" + tokens[i * 3 + 1]);
 					cWeight.add(Double.parseDouble(tokens[i * 3 + 2]));
 				}
-				
 				// find default cost to received node
 				double defaultCost = 0;
 				if(nb.contains(linkAddPort)){
 					defaultCost = stored.get(linkAddPort);
+					int index = nb.indexOf(linkAddPort);
+					timer.set(index, new Date());
 				}else{
 					//if not in stored, it is not a neighbor; add to neighbor
 					int index = cIpPort.indexOf(myAddPort);
@@ -85,71 +89,50 @@ public class ListenThread extends Thread {
 					toSend[0] = true;
 					stored.put(linkAddPort, cWeight.get(index));
 					
-					
-					
-					
-					
+					//update routing table
+					//if not in routing table, add it; else edit it
+					if(!ipPort.contains(linkAddPort)){
+						ipPort.add(linkAddPort);
+						weight.add(cWeight.get(index));
+						link.add(linkAddPort);
+					}else{
+						int myIndex = ipPort.indexOf(linkAddPort);
+						weight.set(myIndex, cWeight.get(index));
+						link.set(myIndex, linkAddPort);
+					}
+					updated = true;
 				}
 				
-				
-				// update current Routing Table
+				// update current Routing Table based on 
+				// neighbor's routing table
 				for (int i = 0; i < cWeight.size(); i++) {
-
 					String currIpPort = cIpPort.get(i);
-					// if referring to self
-					if (currIpPort.equals(myAddPort)) {
-						// check if already on nb list
-						if (!nb.contains(linkAddPort)) {
-							// if not, add to nb
-							nb.add(linkAddPort);
-							timer.add(new Date());
-							toSend[0] = true;
-							stored.put(linkAddPort, cWeight.get(i));
-							
-							//if not in routing table, add it
-							if(!ipPort.contains(linkAddPort)){
-								ipPort.add(linkAddPort);
-								weight.add(cWeight.get(i));
-								link.add(linkAddPort);
-							//else update routing table
-							}else{
-								
-							}
-							
-						} else {
-							//if it is in nb list; log its time
-							for (int j = 0; j < nb.size(); j++) {
-								if (nb.get(j).equals(linkAddPort)){
-									timer.set(j, new Date());
-								}
-							}
-							//update routing table
-							for (int j = 0; j < weight.size(); j++) {
-								if (ipPort.get(j).equals(currIpPort)
-										&& weight.get(j) > cWeight.get(i)) {
-									weight.set(j, cWeight.get(i));
-									link.set(j, linkAddPort);
-									toSend[0] = true;
-								}
-							}
-						}
+					Double currWeight = cWeight.get(i);
+					// if referring to self; do nothing; we already check for this
+					// if not referring to self, update routing table
+					if (!currIpPort.equals(myAddPort)){						
 						// update Routing Table
-					} else if (ipPort.contains(currIpPort)) {
-						for (int j = 0; j < weight.size(); j++) {
-							if (ipPort.get(j).equals(currIpPort)
-									&& weight.get(j) > cWeight.get(i)) {
-								weight.set(j, cWeight.get(i));
-								link.set(j, linkAddPort);
-								toSend[0] = true;
+						//if in routing table; check if needs to be updated
+						if (ipPort.contains(currIpPort)) {
+							int index = ipPort.indexOf(currIpPort);
+							//if default cost + cost to dest < currDest
+							//replace cost and set link
+							if((weight.get(index) < defaultCost + currWeight)){
+								weight.set(index, defaultCost + currWeight);
+								link.set(index, linkAddPort);
+								updated = true;
 							}
+						//otherwise just add it
+						}else {
+							ipPort.add(currIpPort);
+							weight.add(defaultCost + currWeight);
+							link.add(linkAddPort);
+							updated = true;
 						}
-					} else {
-						ipPort.add(cIpPort.get(i));
-						weight.add(cWeight.get(i));
-						link.add(linkAddPort);
-						toSend[0] = true;
 					}
 				}
+				if(updated)
+					toSend[0] = true;
 			}
 			
 			//if LINKDOWN message
