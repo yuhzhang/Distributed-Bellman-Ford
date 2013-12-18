@@ -1,33 +1,38 @@
 Chih-Kai Chang
 cc3527
-pa2
+pa3
 java
 
 simply type make to compile
 
 How to use:
-	java Reciever <filename> <listening_port> <remote_ip> <remote_port> <log_filename>
-	java Sender <filename> <remote_ip> <remote_port> <ack_port> <window_size> <log_filename>
+	java Client <port number> <timeout (s)> [ip_address port_number cost ...]
 
-test file:
-	alternatively, 3 .sh files are included to test with proxy
+after starting a client, type HELP for a list of commands:
 
-	proxy.sh
-	sender.sh
-	receiver.sh
+	NEIGHBOR : lists the neighbors and the links
+	SHOWRT	 : lists the routing table
+	LINKDOWN <ipaddress> <port> : destroys a link by sending a LINKDOWN message to the
+								  neighbor as well as removing from neighborList and
+								  set routing table of any destination through that
+								  neighbor to infinity
+	LINKUP <ip address> <port> :  retores the link and sends  a LINKUP message to the
+								  neighbor
+	CLOSE	: closes the client similar to Ctrl + C
 
-	simply type sh <file>.sh to run it
+Data Structure
+The data structure behind the routing table is 3 ArrayList of Destination,
+Estimated Cost, and Link. Each client also holds a list of neighbors and a list
+of time that the neighbor has send an UPDATE. 
 
-Reciever uses Go Back N protocal to handle corrupt/out-of-order/dropped/duplicate packets.
-	All packets received will be logged regardless of out-of-order/duplicate packets.
-		Corrupt packets are dropped and not written to the log file.
+Threads
+TimerThread.java	keeps track of when TIMEOUT seconds is up to send UPDATE to neighbors.
+					It also tracks TIMEOUT*3 seconds to drop an unresponsive neighbor as a neighbor.
+SendThread.java		sends to the neighbors its Routing Table
+ListenThread.java	listens to incoming UPDATES, LINKDOWNS, and LINKUPs. It also calculates the least
+					cost path to the destinations. This might be weird, but I do not keep track of all
+					Routing tables, instead, I look at incoming Routing Table from a neighbor and compare
+					from there.
 
-Sender starts sending as soon as it is started; Uses a separate thread to listen for ack;
-	Checksum is the sum over the data.
-	Timeout is set to 50ms. To change this, find the variable timeout.
-		It is updated everytime an ACK is received using Told = 0.25 * Tnew + 0.75 * RTT.
-	Flags: ACK significance and FIN significance
-	Sequence number starts at 0;
-
-//extra
-window size greater than 1 is supported
+This program works when tested with 3 and 4 nodes with LINKDOWN and CLOSE. Bouncing is observed. But the
+optimal path is eventually found.
