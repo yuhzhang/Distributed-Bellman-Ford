@@ -49,7 +49,7 @@ public class SendThread extends Thread{
 			}
 			
 			if(toSend[0]){
-				System.out.println("sending");
+				//System.out.println("sending");
 				sentTime[0] = new Date();
 				//make a local copy of Routing Table
 				ArrayList<String> mIpPort = new ArrayList<String>();

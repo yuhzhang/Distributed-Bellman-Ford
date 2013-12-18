@@ -86,7 +86,6 @@ public class ListenThread extends Thread {
 					int index = cIpPort.indexOf(myAddPort);
 					nb.add(linkAddPort);
 					timer.add(new Date());
-					toSend[0] = true;
 					stored.put(linkAddPort, cWeight.get(index));
 					
 					//update routing table
@@ -116,13 +115,12 @@ public class ListenThread extends Thread {
 						if (ipPort.contains(currIpPort)) {
 							int index = ipPort.indexOf(currIpPort);
 							
-							//
 							if(link.get(index).equals(linkAddPort)){
-								weight.set(index, defaultCost + currWeight);
-								updated = true;
+								if(weight.get(index) != defaultCost + currWeight){
+									weight.set(index, defaultCost + currWeight);
+									updated = true;
+								}
 							}
-							
-							
 							
 							double direct = Double.MAX_VALUE;
 							double min = Double.MAX_VALUE;
@@ -152,13 +150,14 @@ public class ListenThread extends Thread {
 						}
 					}
 				}
-				if(updated)
+				if(updated){
 					toSend[0] = true;
+				}
 			}
 			
 			//if LINKDOWN message
 			if(msg.equals("LINKDOWN")){
-				System.out.println("LINKDOWN");
+				//System.out.println("LINKDOWN");
 				//delete from neighbor list
 				for(int i=0; i<nb.size(); i++){
 					if(nb.get(i).equals(linkAddPort)){
@@ -183,7 +182,7 @@ public class ListenThread extends Thread {
 			
 			//if LINKUP message
 			if(msg.equals("LINKUP")){
-				System.out.println("received LINKUP");
+				//System.out.println("received LINKUP");
 				//add back to neighbor list
 				nb.add(linkAddPort);
 				timer.add(new Date());

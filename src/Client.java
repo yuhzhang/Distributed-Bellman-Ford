@@ -91,7 +91,7 @@ public class Client {
 		
 		while(true){
 			String input = "";
-			System.out.println("well?");
+			System.out.println("type HELP for list of commands");
 			
 			try {
 				input = in.readLine();
@@ -99,14 +99,19 @@ public class Client {
 				e.printStackTrace();
 			}
 			
-			System.out.println(toString(ipPort, weight, link));
+			if(input.equals("HELP")){
+				System.out.println("NEIGHBOR: shows the list of neighbor and link cost");
+				System.out.println("SHOWRT:   shows the routing table");
+				System.out.println("LINKDOWN <ip address> <port>: destroys link");
+				System.out.println("LINKUP <ip address> <port>: restores link");
+				System.out.println("CLOSE :   closes the client");
+			}
 			
-			if(input.equals("nb")){
+			if(input.equals("NEIGHBOR")){
 				for(int i=0; i<nb.size(); i++){
 					System.out.println(nb.get(i) + " " + stored.get(nb.get(i)));
 				}
 			}
-			
 			
 			if(input.equals("SHOWRT")){
 				System.out.println(toString(ipPort, weight, link));
